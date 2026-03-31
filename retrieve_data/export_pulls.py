@@ -103,9 +103,9 @@ def main() -> int:
     parser.add_argument(
         "--git-history-tree-repo",
         "--git-log-repo",
-        default=os.environ.get("GIT_LOG_REPO", ""),
+        default=os.environ.get("GIT_REVIEW_REPO", ""),
         dest="git_history_tree_repo",
-        help="App clone path override (see git_history_tree_export).",
+        help="App clone path override (env GIT_REVIEW_REPO; see git_history_tree_export).",
     )
     args = parser.parse_args()
 
@@ -153,7 +153,7 @@ def main() -> int:
         if repo is None:
             print(
                 "warning: skipped git history tree — could not resolve app repo; "
-                "set GIT_LOG_REPO or --git-history-tree-repo",
+                "set GIT_REVIEW_REPO or --git-history-tree-repo",
                 file=sys.stderr,
             )
             return 0

@@ -1,0 +1,5 @@
+# Local RAG embeddings (PyTorch + sentence-transformers). Optional: pip install -r requirements-rag.txt
+# Slow network: pip install --default-timeout=300 --retries 10 -r requirements-rag.txt
+numpy>=1.26,<3
+tqdm>=4.66,<5
+sentence-transformers>=3.0,<5

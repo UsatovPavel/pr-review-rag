@@ -7,7 +7,7 @@ from that tip (`git rev-list <ref>`). If unset, `on_ref` and `ref` are JSON `nul
 
 Env: `GIT_LOG_REF`, `GIT_LOG_MAX` (0 = no limit), `GIT_LOG_REFLOG=1` / `--reflog`.
 
-Path resolution: `GITHUB_REPOSITORY`, `GIT_LOG_REPO`, etc. (see `resolve_git_log_repo`).
+Path resolution: `GIT_REVIEW_REPO` или `GITHUB_REPOSITORY` + `git remote origin` (см. `database/rag_review_branch/repo_resolve.py`).
 """
 
 from __future__ import annotations
@@ -31,54 +31,35 @@ def is_git_work_tree(repo: Path) -> bool:
     return r.returncode == 0 and r.stdout.strip() == "true"
 
 
-def _repo_name_from_github_spec(spec: str) -> str | None:
-    spec = spec.strip()
-    if "/" not in spec:
-        return None
-    _, _, name = spec.partition("/")
-    return name or None
-
-
 def resolve_git_log_repo(
     tooling_dir: Path,
     *,
     github_repository: str | None = None,
 ) -> tuple[Path | None, str | None]:
-    """
-    Returns (repo_path, error_message).
-    Priority: GIT_LOG_REPO → parent(tooling_dir) if git → sibling tooling_dir.parent/repo_name
-    from GITHUB_REPOSITORY → GIT_LOG_ROOT/repo_name.
-    """
-    raw = os.environ.get("GIT_LOG_REPO", "").strip()
-    if raw:
-        p = Path(raw).expanduser().resolve()
-        if is_git_work_tree(p):
-            return p, None
-        return None, f"GIT_LOG_REPO is not a git work tree: {p}"
+    """Единая логика с rag review: `database.rag_review_branch.repo_resolve.resolve_review_repo`."""
+    pr_root = tooling_dir.resolve().parent
+    rs = str(pr_root)
+    if rs not in sys.path:
+        sys.path.insert(0, rs)
+    from database.rag_review_branch.repo_resolve import resolve_review_repo  # noqa: PLC0415
 
-    gh = (github_repository or os.environ.get("GITHUB_REPOSITORY", "") or "").strip()
-    repo_name = _repo_name_from_github_spec(gh)
+    return resolve_review_repo(pr_root, github_repository=github_repository)
 
-    parent = tooling_dir.resolve().parent
-    if is_git_work_tree(parent):
-        return parent, None
 
-    if repo_name:
-        sibling = parent / repo_name
-        if is_git_work_tree(sibling):
-            return sibling, None
+def explain_resolve_git_log_repo(
+    tooling_dir: Path,
+    *,
+    github_repository: str | None = None,
+) -> str:
+    pr_root = tooling_dir.resolve().parent
+    rs = str(pr_root)
+    if rs not in sys.path:
+        sys.path.insert(0, rs)
+    from database.rag_review_branch.repo_resolve import (  # noqa: PLC0415
+        explain_review_repo_resolution,
+    )
 
-        root = os.environ.get("GIT_LOG_ROOT", "").strip()
-        if root:
-            candidate = Path(root).expanduser().resolve() / repo_name
-            if is_git_work_tree(candidate):
-                return candidate, None
-            return (
-                None,
-                f"GIT_LOG_ROOT/{repo_name} is not a git work tree: {candidate}",
-            )
-
-    return None, None
+    return explain_review_repo_resolution(pr_root, github_repository=github_repository)
 
 
 def _mark_ref_name(raw: str) -> str | None:
@@ -203,8 +184,8 @@ def git_history_tree_main(argv: list[str] | None) -> int:
     )
     parser.add_argument(
         "--repo",
-        default=os.environ.get("GIT_LOG_REPO", ""),
-        help="Override path to app clone (default: infer from GITHUB_REPOSITORY; see module doc).",
+        default=os.environ.get("GIT_REVIEW_REPO", ""),
+        help="Override path to app clone (default: env GIT_REVIEW_REPO or infer; see module doc).",
     )
     args = parser.parse_args(argv)
 
@@ -223,8 +204,8 @@ def git_history_tree_main(argv: list[str] | None) -> int:
             return 2
         if repo is None:
             print(
-                "error: could not resolve app repo: set GITHUB_REPOSITORY, or GIT_LOG_REPO / --repo, "
-                "or GIT_LOG_ROOT (with GITHUB_REPOSITORY for folder name)",
+                "error: could not resolve app repo: set GIT_REVIEW_REPO or --repo, or GITHUB_REPOSITORY "
+                "(origin must match owner/repo), or see module doc",
                 file=sys.stderr,
             )
             return 2

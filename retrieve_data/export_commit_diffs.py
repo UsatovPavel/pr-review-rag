@@ -7,7 +7,7 @@ remotes, stash parents as refs, etc.) is included. Optional `--reflog` adds
 `--reflog` to rev-list (more rewritten/squashed tips from reflog — not a guarantee
 of “every object ever”, but wider than `--all` alone).
 
-Override repo path like `git_history_tree_export.py`: GIT_LOG_REPO, GITHUB_REPOSITORY, etc.
+Override repo path like `git_history_tree_export.py`: GIT_REVIEW_REPO, GITHUB_REPOSITORY, etc.
 """
 
 from __future__ import annotations
@@ -112,13 +112,13 @@ def main() -> int:
     )
     parser.add_argument(
         "--repo",
-        default=os.environ.get("GIT_LOG_REPO", ""),
-        help="App clone path (default: resolve like git_history_tree_export from GITHUB_REPOSITORY).",
+        default=os.environ.get("GIT_REVIEW_REPO", ""),
+        help="App clone path (default: resolve like git_history_tree_export).",
     )
     parser.add_argument(
         "--github-repository",
         default=default_gh,
-        help="owner/name for path resolution if GIT_LOG_REPO unset (default: env).",
+        help="owner/name for path resolution if --repo unset (default: env).",
     )
     parser.add_argument(
         "--out-dir",
@@ -163,7 +163,7 @@ def main() -> int:
             return 2
         if r is None:
             print(
-                "error: set GIT_LOG_REPO or GITHUB_REPOSITORY (for path resolution)",
+                "error: set GIT_REVIEW_REPO or GITHUB_REPOSITORY (origin must match) for path resolution",
                 file=sys.stderr,
             )
             return 2

@@ -1,7 +1,11 @@
 .env
+.cache/
+.temp_env
 .venv/
 venv/
 __pycache__/
 export/
 *.sqlite
 *.sqlite3
+review_rag.sqlite
+review_rag_full.sqlite
